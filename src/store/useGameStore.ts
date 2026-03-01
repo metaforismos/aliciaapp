@@ -62,6 +62,7 @@ interface GameState {
   advanceStage: () => void;
   completeChapter: () => void;
   resetSession: () => void;
+  resetAllProgress: () => void;
 }
 
 // ────────────────────────────────────────────
@@ -262,6 +263,16 @@ export const useGameStore = create<GameState>()(
 
       resetSession: () => {
         set({
+          currentExercise: null,
+          sessionExerciseCount: 0,
+          sessionStartTime: null,
+        });
+      },
+
+      resetAllProgress: () => {
+        set({
+          progress: DEFAULT_PROGRESS,
+          adaptiveState: DEFAULT_ADAPTIVE_STATE,
           currentExercise: null,
           sessionExerciseCount: 0,
           sessionStartTime: null,

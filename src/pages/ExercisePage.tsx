@@ -539,7 +539,7 @@ export default function ExercisePage() {
       transition={pageTransition}
     >
       {/* ── Top: Progress Trail ── */}
-      <div className="flex-shrink-0 pt-safe px-2 pt-1">
+      <div className="flex-shrink-0 pt-safe px-2 pt-3 mt-1">
         <ProgressTrail
           stages={chapter.stages.map((s) => ({ title: s.title, order: s.order }))}
           currentStage={currentStageNum}

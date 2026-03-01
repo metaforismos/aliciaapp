@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { chapters } from '../data/chapters';
 import { useGameStore } from '../store/useGameStore';
 
@@ -81,6 +82,8 @@ const cardVariants = {
 export default function HomePage() {
   const navigate = useNavigate();
   const progress = useGameStore((s) => s.progress);
+  const resetAllProgress = useGameStore((s) => s.resetAllProgress);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Determine which chapters are unlocked
   function isChapterUnlocked(_chapterId: string, order: number): boolean {
@@ -269,20 +272,65 @@ export default function HomePage() {
 
         <motion.button
           className="game-button bg-white/15 backdrop-blur-sm text-white/70 py-3 px-4 text-sm"
-          onClick={() => navigate('/parent')}
+          onClick={() => setShowResetConfirm(true)}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
-          aria-label="Panel parental"
+          aria-label="Empezar de nuevo"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <path
-              d="M10 2a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM6 9a4 4 0 018 0v1H6V9zM3.5 14.5A1.5 1.5 0 015 13h10a1.5 1.5 0 011.5 1.5v.5A2.5 2.5 0 0114 17.5H6A2.5 2.5 0 013.5 15v-.5z"
+              d="M10 3a7 7 0 107 7h-2a5 5 0 11-1.5-3.57L11 9H17V3l-2.35 2.35A6.97 6.97 0 0010 3z"
               fill="currentColor"
               fillOpacity={0.7}
             />
           </svg>
         </motion.button>
       </div>
+
+      {/* ── Reset confirmation modal ── */}
+      <AnimatePresence>
+        {showResetConfirm && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="absolute inset-0 bg-black/40" onClick={() => setShowResetConfirm(false)} />
+            <motion.div
+              className="relative z-10 bg-white rounded-2xl shadow-xl mx-6 p-6 max-w-xs text-center"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+            >
+              <p className="text-bark font-display font-bold text-lg mb-2">
+                ¿Empezar de nuevo?
+              </p>
+              <p className="text-bark/60 text-sm mb-5">
+                Se borrará todo el progreso y las patitas ganadas.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-gray-200 text-bark font-bold text-sm"
+                  onClick={() => setShowResetConfirm(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-sunset-500 text-white font-bold text-sm"
+                  onClick={() => {
+                    resetAllProgress();
+                    setShowResetConfirm(false);
+                  }}
+                >
+                  Borrar todo
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
