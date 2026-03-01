@@ -43,7 +43,7 @@ function PadKey({ label, variant, onPress, disabled }: PadKeyProps) {
         inline-flex items-center justify-center
         rounded-xl font-bold font-display
         touch-manipulation select-none
-        w-[56px] h-[56px] min-w-[48px] min-h-[48px]
+        w-[52px] h-[48px] min-w-[44px] min-h-[44px]
         text-xl shadow-sm
         transition-colors duration-100
         ${variantStyles[variant]}

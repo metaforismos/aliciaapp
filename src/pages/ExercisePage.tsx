@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import VerticalOperation from '../components/exercises/VerticalOperation';
 import NumberPad from '../components/exercises/NumberPad';
-import HintButton from '../components/exercises/HintButton';
-import ProgressTrail from '../components/gamification/ProgressTrail';
 import CelebrationOverlay from '../components/gamification/CelebrationOverlay';
 import PawPrints from '../components/gamification/PawPrints';
-import SpeechBubble from '../components/ui/SpeechBubble';
-import Pudu from '../components/animals/Pudu';
+import HeaderBar from '../components/ui/HeaderBar';
+import StageScene from '../components/ui/StageScene';
+import BottomBar from '../components/ui/BottomBar';
+import MissionModal from '../components/ui/MissionModal';
+import RewardsPanel from '../components/ui/RewardsPanel';
+import ExitConfirmModal from '../components/ui/ExitConfirmModal';
 
 import { useExercise } from '../hooks/useExercise';
 import { useVoice } from '../hooks/useVoice';
@@ -17,6 +19,7 @@ import { useTimer } from '../hooks/useTimer';
 import { useSound } from '../hooks/useSound';
 import { useBackgroundMusic } from '../hooks/useBackgroundMusic';
 import { useGameStore } from '../store/useGameStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 import { generateExercise } from '../engine/math/generators';
 import { getCorrectAnswer } from '../engine/math/evaluator';
@@ -40,6 +43,16 @@ const FEEDBACK_DELAY_MS = 2000;
 const WRONG_SHAKE_MS = 1000;
 const WRONG_ANIMAL_HIDE_MS = 1500;
 
+// Animal emoji mapping (matches HomePage)
+const ANIMAL_EMOJI: Record<string, string> = {
+  'ch1-pudu': '🦌',
+  'ch2-bandurria': '🦩',
+  'ch3-zorro': '🦊',
+  'ch4-monito': '🐵',
+  'ch5-guina': '🐱',
+  'ch6-chungungo': '🦦',
+};
+
 // ────────────────────────────────────────────
 // Page transition variants
 // ────────────────────────────────────────────
@@ -56,17 +69,12 @@ const pageTransition = {
 };
 
 // ────────────────────────────────────────────
-// Helper: determine how many answer digits a vertical exercise needs
-// ────────────────────────────────────────────
-
-// ────────────────────────────────────────────
 // Helper: convert typed digits (natural left-to-right order) to
 // positional array for VerticalOperation display [ones, tens, hundreds, ...]
 // ────────────────────────────────────────────
 
 function typedToPositional(typed: number[], cols: number): (number | null)[] {
   const result: (number | null)[] = new Array(cols).fill(null);
-  // Right-align: last typed digit → position 0 (ones), second-to-last → position 1 (tens)
   for (let i = 0; i < typed.length && i < cols; i++) {
     result[i] = typed[typed.length - 1 - i];
   }
@@ -155,6 +163,41 @@ function ThinkingExerciseDisplay({
 }
 
 // ────────────────────────────────────────────
+// DialogBox — clue/dialogue area at top of right panel
+// ────────────────────────────────────────────
+
+function DialogBox({
+  text,
+  speaker,
+  visible,
+}: {
+  text: string;
+  speaker: string;
+  visible: boolean;
+}) {
+  return (
+    <AnimatePresence>
+      {visible && text && (
+        <motion.div
+          className="w-full bg-white/95 backdrop-blur-sm rounded-xl border border-forest-100 px-3 py-2 shadow-sm"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+        >
+          {speaker && (
+            <p className="text-[9px] font-bold text-forest-600 uppercase tracking-wider mb-0.5">
+              {speaker}
+            </p>
+          )}
+          <p className="text-xs text-bark/80 leading-relaxed">{text}</p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ────────────────────────────────────────────
 // ExercisePage
 // ────────────────────────────────────────────
 
@@ -166,7 +209,9 @@ export default function ExercisePage() {
   const exerciseHook = useExercise();
   const voice = useVoice();
   const timer = useTimer();
-  const sound = useSound({ enabled: true });
+  const soundEnabled = useSettingsStore((s) => s.soundEnabled);
+  const setSoundEnabled = useSettingsStore((s) => s.setSoundEnabled);
+  const sound = useSound({ enabled: soundEnabled });
   const music = useBackgroundMusic();
   const gameStore = useGameStore();
 
@@ -176,10 +221,10 @@ export default function ExercisePage() {
   // ── Animal state ─────────────────────────
   const [animalState, setAnimalState] = useState<AnimalAnimationState>('idle');
 
-  // ── Speech bubble ────────────────────────
-  const [bubbleText, setBubbleText] = useState('');
-  const [bubbleSpeaker, setBubbleSpeaker] = useState('');
-  const [bubbleVisible, setBubbleVisible] = useState(false);
+  // ── Dialog box (replaces SpeechBubble) ───
+  const [dialogText, setDialogText] = useState('');
+  const [dialogSpeaker, setDialogSpeaker] = useState('');
+  const [dialogVisible, setDialogVisible] = useState(false);
 
   // ── Vertical exercise digit input (calculator-style: type left-to-right) ──
   const [typedDigits, setTypedDigits] = useState<number[]>([]);
@@ -192,6 +237,11 @@ export default function ExercisePage() {
   // ── Paw display for feedback ─────────────
   const [showPaws, setShowPaws] = useState(false);
   const [pawsEarned, setPawsEarned] = useState<1 | 2 | 3>(3);
+
+  // ── Modal states (bottom bar) ────────────
+  const [showMission, setShowMission] = useState(false);
+  const [showRewards, setShowRewards] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   // ── Initialization guard ─────────────────
   const initializedRef = useRef(false);
@@ -216,23 +266,21 @@ export default function ExercisePage() {
     }
   }, [chapterId, chapter, navigate]);
 
-  // ── Show bubble with character identity + voice ──
-  const showBubble = useCallback(
+  // ── Show dialog with character identity + voice ──
+  const showDialog = useCallback(
     (dialogueLine: DialogueLine, onEnd?: () => void) => {
-      setBubbleText(dialogueLine.text);
-      setBubbleSpeaker(dialogueLine.speaker);
-      setBubbleVisible(true);
+      setDialogText(dialogueLine.text);
+      setDialogSpeaker(dialogueLine.speaker);
+      setDialogVisible(true);
 
-      // Use the character's voice config if available
       const charVoice = chapter?.animal.id
         ? CHARACTER_VOICE_CONFIGS[chapter.animal.id]
         : undefined;
       const voiceOverride = dialogueLine.voiceConfig ?? charVoice;
 
       voice.speak(dialogueLine.text, () => {
-        // Keep bubble visible a moment after speech ends
         setTimeout(() => {
-          setBubbleVisible(false);
+          setDialogVisible(false);
           onEnd?.();
         }, 500);
       }, voiceOverride);
@@ -252,31 +300,39 @@ export default function ExercisePage() {
     setShowPaws(false);
   }, []);
 
-
-
+  // ── Sound toggle handler ─────────────────
+  const handleToggleSound = useCallback(() => {
+    const newState = !soundEnabled;
+    setSoundEnabled(newState);
+    if (newState) {
+      music.start();
+    } else {
+      music.stop();
+    }
+  }, [soundEnabled, setSoundEnabled, music]);
 
   // ── Initialize session on mount ──────────
   useEffect(() => {
     if (!chapter || !chapterId || initializedRef.current) return;
     initializedRef.current = true;
 
-    // Start game session
     gameStore.startSession(chapterId);
     timer.start();
 
-    // Generate the first exercise
     const firstExercise = generateExercise(chapter.difficultyLevel);
     gameStore.setCurrentExercise(firstExercise);
     resetInputForExercise(firstExercise);
 
-    // Start background music
-    music.start();
+    // Start background music (respect sound setting)
+    if (soundEnabled) {
+      music.start();
+    }
 
-    // Speak greeting from the character (narrative engine: first person, no narrator)
+    // Speak greeting from the character
     const greetingLine = getRandomLine(chapter.animal.id, 'greeting');
     if (greetingLine) {
       setAnimalState(greetingLine.emotion);
-      showBubble(greetingLine, () => {
+      showDialog(greetingLine, () => {
         exerciseHook.startExercise(firstExercise);
       });
     } else {
@@ -292,23 +348,20 @@ export default function ExercisePage() {
       sound.playClick();
       const exercise = exerciseHook.exercise;
       if (!exercise || exercise.type !== 'vertical') {
-        // Thinking exercise: build number string
         if (thinkingAnswer.length < 4) {
           setThinkingAnswer((prev) => prev + String(digit));
         }
         return;
       }
 
-      // Vertical exercise: append digit naturally (like typing a number)
       const vertExercise = exercise as VerticalExercise;
       const maxDigits = vertExercise.digits + 1;
 
       setTypedDigits((prev) => {
-        if (prev.length >= maxDigits) return prev; // already full
+        if (prev.length >= maxDigits) return prev;
         return [...prev, digit];
       });
 
-      // Show carry indicator once the user starts typing
       if (vertExercise.hasCarry && !showCarry) {
         const onesA = vertExercise.operandA % 10;
         const onesB = vertExercise.operandB % 10;
@@ -327,12 +380,10 @@ export default function ExercisePage() {
     if (!exercise) return;
 
     if (exercise.type !== 'vertical') {
-      // Thinking exercise: remove last character
       setThinkingAnswer((prev) => prev.slice(0, -1));
       return;
     }
 
-    // Vertical exercise: remove the last typed digit (natural backspace)
     setTypedDigits((prev) => prev.slice(0, -1));
   }, [exerciseHook.phase, exerciseHook.exercise]);
 
@@ -346,16 +397,13 @@ export default function ExercisePage() {
 
     if (exercise.type === 'vertical') {
       if (typedDigits.length === 0) return;
-      // Parse typed digits as a natural number (left-to-right = "16" → 16)
       userAnswer = parseInt(typedDigits.join(''), 10);
     } else {
-      // Thinking exercise
       if (thinkingAnswer.length === 0) return;
       userAnswer = parseInt(thinkingAnswer, 10);
       if (isNaN(userAnswer)) return;
     }
 
-    // Submit to the exercise hook (evaluates correctness)
     exerciseHook.submitAnswer(userAnswer);
   }, [exerciseHook, typedDigits, thinkingAnswer]);
 
@@ -365,27 +413,22 @@ export default function ExercisePage() {
     const result = exerciseHook.lastResult;
 
     if (result.correct && exerciseHook.phase === 'feedback') {
-      // CORRECT ANSWER
       setIsCorrectDisplay(true);
       sound.playCorrect();
 
-      // Speak celebration from character (narrative engine)
       const celebLine = getRandomLine(chapter.animal.id, 'correct');
       if (celebLine) {
         setAnimalState(celebLine.emotion);
-        showBubble(celebLine);
+        showDialog(celebLine);
       } else {
         setAnimalState('celebrating');
       }
 
-      // Show paws
       setPawsEarned(result.pawsEarned);
       setShowPaws(true);
 
-      // Update game store
       gameStore.submitAnswer(result);
 
-      // After delay, determine next step (read fresh state to avoid stale closures)
       feedbackTimeoutRef.current = setTimeout(() => {
         const freshState = useGameStore.getState();
         const progress = freshState.progress.chapters[chapterId!];
@@ -396,7 +439,6 @@ export default function ExercisePage() {
         const exercisesCompleted = progress.exercisesInCurrentStage;
 
         if (exercisesCompleted >= exercisesRequired) {
-          // Stage complete -- check if it was the last stage
           const isLastStage = progress.currentStage >= chapter.stages.length;
           if (isLastStage) {
             exerciseHook.goToChapterComplete();
@@ -404,7 +446,6 @@ export default function ExercisePage() {
             exerciseHook.goToStageComplete();
           }
         } else {
-          // Generate next exercise
           const nextExercise = generateExercise(chapter.difficultyLevel);
           gameStore.setCurrentExercise(nextExercise);
           resetInputForExercise(nextExercise);
@@ -414,47 +455,39 @@ export default function ExercisePage() {
         }
       }, FEEDBACK_DELAY_MS);
     } else if (!result.correct && exerciseHook.phase === 'playing') {
-      // WRONG ANSWER
       setIsCorrectDisplay(false);
       sound.playWrong();
 
-      // Speak encouragement from character (narrative engine)
       const encourageLine = getRandomLine(chapter.animal.id, 'incorrect');
       if (encourageLine) {
         setAnimalState(encourageLine.emotion);
-        showBubble(encourageLine);
+        showDialog(encourageLine);
       } else {
         setAnimalState('hiding');
       }
 
-      // After brief shake, clear input and reset animal
       wrongTimeoutRef.current = setTimeout(() => {
         setIsCorrectDisplay(null);
-
-        // Clear input so they start fresh
         if (exerciseHook.exercise) {
           resetInputForExercise(exerciseHook.exercise);
         }
       }, WRONG_SHAKE_MS);
 
-      // Animal recovers after a bit longer
       setTimeout(() => {
         setAnimalState('idle');
       }, WRONG_ANIMAL_HIDE_MS);
     }
   }, [exerciseHook.lastResult, exerciseHook.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Handle hint request (narrative engine: character gives hints in first person) ──
+  // ── Handle hint request ──────────────────
   const handleRequestHint = useCallback(() => {
     if (exerciseHook.phase !== 'playing' || !chapter) return;
     const hintLevel = exerciseHook.requestHint();
     const characterId = chapter.animal.id;
 
-    // Get hint from character's dialogue bank
     const hintCategory = `hint${Math.min(hintLevel, 4)}` as 'hint1' | 'hint2' | 'hint3' | 'hint4';
     let hintLine = getRandomLine(characterId, hintCategory);
 
-    // For level 4 hints, fill in specific value placeholders
     if (hintLine && hintLevel >= 4) {
       const exercise = exerciseHook.exercise;
       if (exercise) {
@@ -469,11 +502,11 @@ export default function ExercisePage() {
 
     if (hintLine) {
       setAnimalState(hintLine.emotion);
-      showBubble(hintLine, () => {
+      showDialog(hintLine, () => {
         setAnimalState('idle');
       });
     }
-  }, [exerciseHook, showBubble, chapter]);
+  }, [exerciseHook, showDialog, chapter]);
 
   // ── Stage complete handler ───────────────
   const handleStageComplete = useCallback(() => {
@@ -481,14 +514,12 @@ export default function ExercisePage() {
     sound.playStageComplete();
     gameStore.advanceStage();
 
-    // Generate next exercise for the new stage
     const nextExercise = generateExercise(chapter.difficultyLevel);
     gameStore.setCurrentExercise(nextExercise);
     resetInputForExercise(nextExercise);
     setAnimalState('idle');
     setShowPaws(false);
 
-    // Start the next exercise
     exerciseHook.startExercise(nextExercise);
   }, [chapter, chapterId, gameStore, resetInputForExercise, exerciseHook]);
 
@@ -500,6 +531,13 @@ export default function ExercisePage() {
     timer.pause();
     navigate('/');
   }, [chapterId, gameStore, timer, navigate]);
+
+  // ── Exit handler ─────────────────────────
+  const handleExitConfirm = useCallback(() => {
+    music.stop();
+    timer.pause();
+    navigate('/');
+  }, [music, timer, navigate]);
 
   // ── Early return if no chapter ───────────
   if (!chapter || !chapterId) {
@@ -516,18 +554,17 @@ export default function ExercisePage() {
   const isVertical = currentExercise?.type === 'vertical';
   const phase = exerciseHook.phase;
 
-  // Compute positional digits for VerticalOperation display (calculator-style right-aligned)
+  // Compute positional digits for VerticalOperation display
   const verticalEx = isVertical && currentExercise ? (currentExercise as VerticalExercise) : null;
   const numCols = verticalEx ? verticalEx.digits + 1 : 0;
   const displayUserDigits = typedToPositional(typedDigits, numCols);
-  // Always highlight ones position (rightmost cell) as the "typing target"
   const displayActiveIndex = typedDigits.length < numCols ? 0 : -1;
-  const progressPercent = exercisesRequired > 0
-    ? (exercisesInCurrentStage / exercisesRequired) * 100
-    : 0;
 
   // ── Fun fact for stage complete ──────────
   const currentStageFunFact = currentStageData?.funFact?.text;
+
+  // ── Bottom bar visibility (hide during celebrations) ──
+  const bottomBarVisible = phase !== 'stage_complete' && phase !== 'chapter_complete';
 
   return (
     <motion.div
@@ -538,89 +575,51 @@ export default function ExercisePage() {
       exit="exit"
       transition={pageTransition}
     >
-      {/* ── Top: Progress Trail ── */}
-      <div className="flex-shrink-0 pt-safe px-2 pt-3 mt-1">
-        <ProgressTrail
-          stages={chapter.stages.map((s) => ({ title: s.title, order: s.order }))}
-          currentStage={currentStageNum}
-          exercisesInStage={exercisesInCurrentStage}
-          exercisesRequired={exercisesRequired}
-        />
-      </div>
+      {/* ── Header Bar ── */}
+      <HeaderBar
+        stageName={currentStageData?.title ?? ''}
+        stageOrder={currentStageNum}
+      />
 
       {/* ── Main: Two-column layout ── */}
-      <div className="flex-1 flex min-h-0">
-        {/* ═══ Left Column: Character + Progress ═══ */}
-        <div className="w-[38%] flex flex-col items-center px-1 pb-2">
-          {/* Speech bubble */}
-          {bubbleVisible && (
-            <div className="flex-shrink-0 w-full px-1 pt-1">
-              <SpeechBubble
-                text={bubbleText}
-                visible={bubbleVisible}
-                speaker={bubbleSpeaker}
-                position="above"
-                className="text-xs"
-              />
-            </div>
-          )}
-
-          {/* Character trail area */}
-          <div className="flex-1 flex flex-col items-center justify-end w-full relative">
-            {/* Vertical trail line */}
-            <div className="absolute top-4 bottom-8 left-1/2 -translate-x-1/2 w-0.5 bg-forest-200/40 pointer-events-none" />
-
-            {/* Trail milestone markers */}
-            <div className="absolute top-4 bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center justify-between pointer-events-none">
-              {Array.from({ length: exercisesRequired }, (_, i) => {
-                const idx = exercisesRequired - 1 - i;
-                return (
-                  <div
-                    key={idx}
-                    className={`w-3 h-3 rounded-full border-2 transition-all duration-500 ${
-                      idx < exercisesInCurrentStage
-                        ? 'bg-forest-400 border-forest-500 scale-110'
-                        : 'bg-white/60 border-forest-200'
-                    }`}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Pudú character — moves up as exercises are completed */}
-            <motion.div
-              className="relative z-10"
-              animate={{ y: -(progressPercent / 100) * 200 }}
-              transition={{ type: 'spring' as const, stiffness: 80, damping: 18 }}
-            >
-              <Pudu
-                state={animalState}
-                size="lg"
-                direction="right"
-              />
-            </motion.div>
-
-            {/* Paw prints earned (shown during feedback) */}
-            <AnimatePresence>
-              {showPaws && phase === 'feedback' && (
-                <motion.div
-                  className="mt-1 relative z-10"
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                  transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}
-                >
-                  <PawPrints count={pawsEarned} animate size="sm" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+      <div className="flex-1 flex min-h-0 overflow-hidden pb-[64px]">
+        {/* ═══ Left Column: Stage Scene ═══ */}
+        <div className="w-[45%] relative h-full overflow-hidden">
+          <StageScene
+            backgroundTheme={chapter.backgroundTheme}
+            animalState={animalState}
+            exercisesCompleted={exercisesInCurrentStage}
+            exercisesRequired={exercisesRequired}
+          />
+          {/* Paw prints during feedback — floating over scene */}
+          <AnimatePresence>
+            {showPaws && phase === 'feedback' && (
+              <motion.div
+                className="absolute bottom-20 left-[10%] z-20"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              >
+                <PawPrints count={pawsEarned} animate size="sm" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* ═══ Right Column: Exercise + Controls ═══ */}
-        <div className="w-[62%] flex flex-col items-center py-1 pr-2">
-          {/* Exercise display — fills available space */}
-          <div className="flex-1 flex items-center justify-center min-h-0 w-full">
+        {/* ═══ Right Column: Dialog + Exercise + Controls ═══ */}
+        <div className="w-[55%] h-full flex flex-col items-center py-1 pr-2 pl-1 overflow-hidden">
+          {/* Dialog box (clues, character speech) */}
+          <div className="flex-shrink-0 w-full mb-1">
+            <DialogBox
+              text={dialogText}
+              speaker={dialogSpeaker}
+              visible={dialogVisible}
+            />
+          </div>
+
+          {/* Exercise display — shrinks to fit, allowing numpad space */}
+          <div className="flex-1 flex items-center justify-center min-h-0 w-full overflow-hidden">
             <AnimatePresence mode="wait">
               {currentExercise && phase === 'playing' && (
                 <motion.div
@@ -695,16 +694,8 @@ export default function ExercisePage() {
             </AnimatePresence>
           </div>
 
-          {/* Controls: Hint + NumberPad */}
-          <div className="flex-shrink-0 flex flex-col items-center gap-1 pb-safe pb-1">
-            {phase === 'playing' && (
-              <HintButton
-                hintsUsed={exerciseHook.hintsUsed}
-                maxHints={MAX_HINTS}
-                onRequestHint={handleRequestHint}
-                disabled={phase !== 'playing'}
-              />
-            )}
+          {/* Controls: NumberPad only (Hint moved to BottomBar) */}
+          <div className="flex-shrink-0 flex flex-col items-center pb-1">
             <NumberPad
               onDigit={handleDigit}
               onDelete={handleDelete}
@@ -714,6 +705,52 @@ export default function ExercisePage() {
           </div>
         </div>
       </div>
+
+      {/* ── Bottom Navigation Bar ── */}
+      <BottomBar
+        soundEnabled={soundEnabled}
+        onToggleSound={handleToggleSound}
+        onOpenMission={() => setShowMission(true)}
+        hintsUsed={exerciseHook.hintsUsed}
+        maxHints={MAX_HINTS}
+        onRequestHint={handleRequestHint}
+        hintDisabled={phase !== 'playing'}
+        onOpenRewards={() => setShowRewards(true)}
+        onExit={() => setShowExitConfirm(true)}
+        visible={bottomBarVisible}
+      />
+
+      {/* ── Mission Modal ── */}
+      <MissionModal
+        isOpen={showMission}
+        onClose={() => setShowMission(false)}
+        chapterTitle={chapter.title}
+        animalName={chapter.animal.name}
+        animalEmoji={ANIMAL_EMOJI[chapterId] ?? '🐾'}
+        stageName={currentStageData?.title ?? ''}
+        stageOrder={currentStageNum}
+        stageDescription={currentStageData?.description ?? ''}
+        exercisesCompleted={exercisesInCurrentStage}
+        exercisesRequired={exercisesRequired}
+        totalPaws={chapterProgress?.totalPaws ?? 0}
+      />
+
+      {/* ── Rewards Panel ── */}
+      <RewardsPanel
+        isOpen={showRewards}
+        onClose={() => setShowRewards(false)}
+        totalPaws={gameStore.progress.totalPaws}
+        chapterProgress={gameStore.progress.chapters}
+        achievements={gameStore.progress.achievements}
+        streak={gameStore.progress.streak}
+      />
+
+      {/* ── Exit Confirmation ── */}
+      <ExitConfirmModal
+        isOpen={showExitConfirm}
+        onConfirm={handleExitConfirm}
+        onCancel={() => setShowExitConfirm(false)}
+      />
 
       {/* ── Stage Complete Overlay ── */}
       <AnimatePresence>

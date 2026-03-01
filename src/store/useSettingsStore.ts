@@ -10,6 +10,7 @@ interface SettingsState {
   voiceEnabled: boolean;
   voiceRate: number;
   voicePitch: number;
+  soundEnabled: boolean;
   maxSessionMinutes: number;
   parentPin: string;
 
@@ -17,6 +18,7 @@ interface SettingsState {
   setVoiceEnabled: (enabled: boolean) => void;
   setVoiceRate: (rate: number) => void;
   setVoicePitch: (pitch: number) => void;
+  setSoundEnabled: (enabled: boolean) => void;
   setMaxSessionMinutes: (minutes: number) => void;
   setParentPin: (pin: string) => void;
   verifyPin: (pin: string) => boolean;
@@ -33,6 +35,7 @@ export const useSettingsStore = create<SettingsState>()(
       voiceEnabled: true,
       voiceRate: 0.9,
       voicePitch: 1.1,
+      soundEnabled: true,
       maxSessionMinutes: 15,
       parentPin: '1234',
 
@@ -50,6 +53,10 @@ export const useSettingsStore = create<SettingsState>()(
       setVoicePitch: (pitch: number) => {
         // Clamp pitch between 0.5 and 2.0
         set({ voicePitch: Math.max(0.5, Math.min(2.0, pitch)) });
+      },
+
+      setSoundEnabled: (enabled: boolean) => {
+        set({ soundEnabled: enabled });
       },
 
       setMaxSessionMinutes: (minutes: number) => {
