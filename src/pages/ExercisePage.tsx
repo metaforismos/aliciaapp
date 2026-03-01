@@ -25,11 +25,12 @@ import { generateExercise } from '../engine/math/generators';
 import { getCorrectAnswer } from '../engine/math/evaluator';
 import { getChapterById, EXERCISES_PER_STAGE } from '../data/chapters';
 import {
-  getRandomLine,
+  getRandomLineWithIndex,
   formatDialogue,
   CHARACTER_VOICE_CONFIGS,
 } from '../data/characterDialogues';
 import type { DialogueLine } from '../data/characterDialogues';
+import { getVoiceAudioPath } from '../data/voiceAudioMap';
 
 import type { Exercise, VerticalExercise } from '../types/game';
 import type { AnimalAnimationState } from '../components/animals/types';
@@ -268,7 +269,7 @@ export default function ExercisePage() {
 
   // ── Show dialog with character identity + voice ──
   const showDialog = useCallback(
-    (dialogueLine: DialogueLine, onEnd?: () => void) => {
+    (dialogueLine: DialogueLine, onEnd?: () => void, audioPath?: string | null) => {
       setDialogText(dialogueLine.text);
       setDialogSpeaker(dialogueLine.speaker);
       setDialogVisible(true);
@@ -283,7 +284,7 @@ export default function ExercisePage() {
           setDialogVisible(false);
           onEnd?.();
         }, 500);
-      }, voiceOverride);
+      }, voiceOverride, audioPath);
     },
     [voice, chapter],
   );
@@ -329,12 +330,14 @@ export default function ExercisePage() {
     }
 
     // Speak greeting from the character
-    const greetingLine = getRandomLine(chapter.animal.id, 'greeting');
-    if (greetingLine) {
+    const greetingResult = getRandomLineWithIndex(chapter.animal.id, 'greeting');
+    if (greetingResult) {
+      const { line: greetingLine, index: greetingIdx } = greetingResult;
+      const audioInfo = getVoiceAudioPath(chapter.animal.id, 'greeting', greetingIdx);
       setAnimalState(greetingLine.emotion);
       showDialog(greetingLine, () => {
         exerciseHook.startExercise(firstExercise);
-      });
+      }, audioInfo.audioPath);
     } else {
       setAnimalState('idle');
       exerciseHook.startExercise(firstExercise);
@@ -416,10 +419,11 @@ export default function ExercisePage() {
       setIsCorrectDisplay(true);
       sound.playCorrect();
 
-      const celebLine = getRandomLine(chapter.animal.id, 'correct');
-      if (celebLine) {
-        setAnimalState(celebLine.emotion);
-        showDialog(celebLine);
+      const celebResult = getRandomLineWithIndex(chapter.animal.id, 'correct');
+      if (celebResult) {
+        const audioInfo = getVoiceAudioPath(chapter.animal.id, 'correct', celebResult.index);
+        setAnimalState(celebResult.line.emotion);
+        showDialog(celebResult.line, undefined, audioInfo.audioPath);
       } else {
         setAnimalState('celebrating');
       }
@@ -458,10 +462,11 @@ export default function ExercisePage() {
       setIsCorrectDisplay(false);
       sound.playWrong();
 
-      const encourageLine = getRandomLine(chapter.animal.id, 'incorrect');
-      if (encourageLine) {
-        setAnimalState(encourageLine.emotion);
-        showDialog(encourageLine);
+      const encourageResult = getRandomLineWithIndex(chapter.animal.id, 'incorrect');
+      if (encourageResult) {
+        const audioInfo = getVoiceAudioPath(chapter.animal.id, 'incorrect', encourageResult.index);
+        setAnimalState(encourageResult.line.emotion);
+        showDialog(encourageResult.line, undefined, audioInfo.audioPath);
       } else {
         setAnimalState('hiding');
       }
@@ -486,9 +491,13 @@ export default function ExercisePage() {
     const characterId = chapter.animal.id;
 
     const hintCategory = `hint${Math.min(hintLevel, 4)}` as 'hint1' | 'hint2' | 'hint3' | 'hint4';
-    let hintLine = getRandomLine(characterId, hintCategory);
+    const hintResult = getRandomLineWithIndex(characterId, hintCategory);
+    if (!hintResult) return;
 
-    if (hintLine && hintLevel >= 4) {
+    let hintLine = hintResult.line;
+    const audioInfo = getVoiceAudioPath(characterId, hintCategory, hintResult.index);
+
+    if (hintLevel >= 4) {
       const exercise = exerciseHook.exercise;
       if (exercise) {
         const correctAnswer = getCorrectAnswer(exercise);
@@ -500,12 +509,10 @@ export default function ExercisePage() {
       }
     }
 
-    if (hintLine) {
-      setAnimalState(hintLine.emotion);
-      showDialog(hintLine, () => {
-        setAnimalState('idle');
-      });
-    }
+    setAnimalState(hintLine.emotion);
+    showDialog(hintLine, () => {
+      setAnimalState('idle');
+    }, audioInfo.audioPath);
   }, [exerciseHook, showDialog, chapter]);
 
   // ── Stage complete handler ───────────────

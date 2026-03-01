@@ -1,0 +1,39 @@
+nombre,descripcion,categoria,etapa,variantes,wiki_search
+arrayan_grande,"Large Arrayán tree (Luma apiculata) with distinctive smooth orange-cinnamon bark and dense green canopy",trees,bosque_oscuro,1,Luma apiculata
+arrayan_mediano,"Medium Arrayán tree with orange bark and spreading branches",trees,bosque_oscuro,1,Luma apiculata
+arrayan_pequeno,"Young Arrayán sapling with thin orange trunk and small green canopy",trees,bosque_oscuro,1,Luma apiculata
+coigue,"Coigüe tree (Nothofagus dombeyi), tall evergreen with dark trunk and dense dark green foliage",trees,bosque_oscuro,1,Nothofagus dombeyi
+canelo,"Canelo tree (Drimys winteri), sacred Mapuche tree with broad glossy leaves and white flowers",trees,bosque_oscuro,1,Drimys winteri
+luma,"Luma tree (Amomyrtus luma) with twisted trunk and small dark berries",trees,bosque_oscuro,1,Amomyrtus luma
+tepu,"Tepú tree (Tepualia stipularis) with reddish bark growing near water",trees,arroyo,1,Tepualia stipularis
+helecho_ampe,"Ampe fern (Lophosoria quadripinnata), large tree fern with broad fronds",plants,helechos,1,Lophosoria quadripinnata
+helecho_costilla,"Costilla de vaca fern (Blechnum chilense), large fern with long symmetrical fronds",plants,helechos,1,Blechnum chilense
+nalca,"Giant Nalca plant (Gunnera tinctoria) with enormous round leaves on thick stems",plants,arroyo,1,Gunnera tinctoria
+copihue_rojo,"Copihue flower (Lapageria rosea), Chile's national flower, red bell-shaped hanging from vine",plants,claro,1,Lapageria rosea
+chilco,"Chilco bush (Fuchsia magellanica) with small red and purple hanging flowers",plants,claro,1,Fuchsia magellanica
+quila,"Quila bamboo (Chusquea quila), dense bamboo-like grass forming thickets",plants,bosque_oscuro,1,Chusquea quila
+musgo_barba,"Old man's beard moss (Usnea) hanging from tree branches, grey-green strands",plants,bosque_oscuro,1,Usnea
+pudu_idle,"Pudú deer (Pudu puda) standing in neutral pose, small brown deer with short antlers",fauna,bosque_oscuro,3,Pudú
+pudu_happy,"Pudú deer jumping with joy, cute happy expression",fauna,bosque_oscuro,1,Pudú
+pudu_sad,"Pudú deer looking down with droopy expression",fauna,bosque_oscuro,1,Pudú
+pudu_walking,"Pudú deer walking, side view",fauna,bosque_oscuro,1,Pudú
+monito_monte,"Monito del monte (Dromiciops gliroides), tiny marsupial with big round eyes on a branch",fauna,bosque_oscuro,1,Monito del monte
+quetru,"Quetru duck (Tachyeres pteneres), large flightless steamer duck with grey plumage",fauna,arroyo,1,Tachyeres pteneres
+zarapito,"Zarapito bird (Numenius phaeopus), shorebird with long curved beak",fauna,reef,1,Whimbrel
+chungungo,"Chungungo marine otter (Lontra felina) with dark brown fur",fauna,reef,1,Marine otter
+martin_pescador,"Martín pescador (Megaceryle torquata), kingfisher with blue and orange plumage",fauna,arroyo,1,Ringed kingfisher
+chucao,"Chucao bird (Scelorchilus rubecula), small bird with orange breast and grey back",fauna,bosque_oscuro,1,Chucao tapaculo
+ranita_darwin,"Darwin's frog (Rhinoderma darwinii), small green triangular-shaped frog",fauna,helechos,1,Rhinoderma darwinii
+piedra_musgo,"Large mossy rock covered in green moss and small ferns",environment,bosque_oscuro,2,Moss covered rock
+tronco_caido,"Fallen log covered in moss and small mushrooms on forest floor",environment,bosque_oscuro,1,Fallen log moss forest
+rio_piedras,"River stones and pebbles in shallow water",environment,arroyo,2,River pebbles stream
+cascada_pequena,"Small waterfall flowing over mossy rocks",environment,arroyo,1,Small waterfall moss
+playa_rocosa,"Rocky beach with dark volcanic rocks and tide pools",environment,reef,1,Rocky beach tide pools
+algas_marinas,"Seaweed and kelp on coastal rocks",environment,reef,1,Kelp seaweed rocks
+hongo_bosque,"Colorful forest mushroom growing on tree trunk",environment,bosque_oscuro,2,Forest mushroom tree trunk
+nido_pajaro,"Small bird nest made of twigs and moss",environment,claro,1,Bird nest twigs
+flores_pradera,"Wildflowers in a forest clearing",environment,claro,1,Wildflowers meadow
+palafito,"Traditional Chiloé palafito stilt house with colorful wooden walls over water",buildings,reef,1,Palafito Chiloé
+iglesia_chilota,"Chiloé traditional wooden church with colorful facade UNESCO style",buildings,claro,1,Churches of Chiloé
+cerca_madera,"Old wooden fence Chiloé-style weathered timber",buildings,claro,1,Wooden fence rural
+bote_chilote,"Traditional Chiloé fishing boat (lancha) painted in bright colors",buildings,reef,1,Chiloé fishing boat

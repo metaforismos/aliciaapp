@@ -407,17 +407,35 @@ export function getCharacterDialogues(characterId: string): CharacterDialogueBan
 
 // ── Helper: get a random dialogue line from a category ──
 
+export interface DialogueLineWithIndex {
+  line: DialogueLine;
+  index: number;
+}
+
 export function getRandomLine(
   characterId: string,
   category: DialogueCategory,
 ): DialogueLine | undefined {
+  const result = getRandomLineWithIndex(characterId, category);
+  return result?.line;
+}
+
+/**
+ * Same as getRandomLine but also returns the index within the category array.
+ * The index is used to look up pre-recorded audio files.
+ */
+export function getRandomLineWithIndex(
+  characterId: string,
+  category: DialogueCategory,
+): DialogueLineWithIndex | undefined {
   const bank = CHARACTER_DIALOGUES[characterId];
   if (!bank) return undefined;
 
   const lines = bank[category];
   if (!lines || lines.length === 0) return undefined;
 
-  return lines[Math.floor(Math.random() * lines.length)];
+  const index = Math.floor(Math.random() * lines.length);
+  return { line: lines[index], index };
 }
 
 // ── Helper: format dialogue text with placeholders ──

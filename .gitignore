@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated audio files (ElevenLabs voice output)
+public/audio/voices/
+public/audio/test/
+
+# Asset generation artifacts
+assets/assets/_raw/
+assets/generation_log.csv
