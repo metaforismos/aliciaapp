@@ -21,7 +21,7 @@ export const chapterBadges: Achievement[] = [
   },
   {
     id: 'badge-ch4-monito',
-    title: 'Guardiana del Monito',
+    title: 'Amiga del Monito',
     description: 'Ayudaste a Momo a alimentarse después de su larga siesta.',
   },
   {
@@ -155,8 +155,8 @@ export const explorationAchievements: Achievement[] = [
   },
   {
     id: 'all-chapters',
-    title: 'Guardiana de Chiloé',
-    description: 'Completaste los 6 capítulos y ayudaste a todos los animales. ¡Eres la guardiana del bosque!',
+    title: 'Exploradora de Chiloé',
+    description: 'Completaste los 6 capítulos y ayudaste a todos los animales. ¡Eres la mejor exploradora de Chiloé!',
   },
 ];
 

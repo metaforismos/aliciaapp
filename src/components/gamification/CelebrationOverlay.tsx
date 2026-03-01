@@ -225,7 +225,7 @@ function ChapterCompleteCard({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1 }}
       >
-        {badgeTitle || `Guardiana del ${animalName}`}
+        {badgeTitle || `Amiga del ${animalName}`}
       </motion.h2>
 
       <motion.p
@@ -258,7 +258,7 @@ function ChapterCompleteCard({
         animate={{ opacity: 1 }}
         transition={{ delay: 1.8 }}
       >
-        Volver al Bosque
+        Volver a Chiloé
       </motion.button>
     </motion.div>
   );

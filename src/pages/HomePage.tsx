@@ -114,12 +114,12 @@ export default function HomePage() {
       {/* ── Header ── */}
       <div className="flex flex-col items-center pt-10 pb-4 px-6 shrink-0">
         <motion.h1
-          className="text-3xl font-display font-extrabold text-white tracking-tight"
+          className="text-2xl font-display font-extrabold text-white tracking-tight"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          Guardianes del Bosque
+          Las aventuras de Alicia
         </motion.h1>
         <motion.p
           className="text-earth-300 font-display text-lg font-semibold mt-0.5"
@@ -127,7 +127,7 @@ export default function HomePage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.25 }}
         >
-          Chiloe
+          en Chiloé
         </motion.p>
 
         {/* Total paws badge */}

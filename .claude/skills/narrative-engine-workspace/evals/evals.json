@@ -1,0 +1,23 @@
+{
+  "skill_name": "narrative-engine",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Necesito escribir los mensajes de celebración (respuesta correcta) para el capítulo de Momo el Monito del Monte. Debe haber 8 variantes. Estamos en la etapa 3 (Las semillas) donde Momo busca semillas de quintral en el sotobosque.",
+      "expected_output": "8 mensajes donde Momo habla directamente a Alicia con su personalidad dormilona/dulce, referenciando semillas y el sotobosque. Sin narrador omnisciente. Con bostezos y metáforas de sueño.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Escribe la intro narrativa del capítulo 5 (Luna la Güiña). Es el momento donde el jugador entra al capítulo y Luna se presenta por primera vez a Alicia.",
+      "expected_output": "Un diálogo donde Luna habla directamente a Alicia, presentándose con su personalidad sigilosa/misteriosa. Frases cortas, ambiente nocturno, sin narrador describiendo a Luna en tercera persona.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Los hints (pistas) del capítulo 2 (Berta y Bruno las Bandurrias) suenan muy genéricos. Reescríbelos para la etapa 4 (El vuelo). Necesito 4 niveles de pistas progresivas para un ejercicio de resta.",
+      "expected_output": "4 niveles de hints donde Berta y Bruno hablan con su estilo ruidoso/dramático, referenciando el vuelo y el cielo. Nivel 1 motivacional, nivel 4 casi da la respuesta. Los dos se interrumpen entre sí.",
+      "files": []
+    }
+  ]
+}

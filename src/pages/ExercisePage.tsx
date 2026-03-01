@@ -22,13 +22,11 @@ import { generateExercise } from '../engine/math/generators';
 import { getCorrectAnswer } from '../engine/math/evaluator';
 import { getChapterById, EXERCISES_PER_STAGE } from '../data/chapters';
 import {
-  celebrations,
-  encouragements,
-  greetings,
-  hintTemplates,
-  formatMessage,
-  getRandomMessage,
-} from '../data/messages';
+  getRandomLine,
+  formatDialogue,
+  CHARACTER_VOICE_CONFIGS,
+} from '../data/characterDialogues';
+import type { DialogueLine } from '../data/characterDialogues';
 
 import type { Exercise, VerticalExercise } from '../types/game';
 import type { AnimalAnimationState } from '../components/animals/types';
@@ -62,15 +60,15 @@ const pageTransition = {
 // ────────────────────────────────────────────
 
 // ────────────────────────────────────────────
-// Helper: build a number from digit array [ones, tens, hundreds, ...]
+// Helper: convert typed digits (natural left-to-right order) to
+// positional array for VerticalOperation display [ones, tens, hundreds, ...]
 // ────────────────────────────────────────────
 
-function digitsToNumber(digits: (number | null)[]): number {
-  let result = 0;
-  for (let i = 0; i < digits.length; i++) {
-    if (digits[i] !== null) {
-      result += digits[i]! * Math.pow(10, i);
-    }
+function typedToPositional(typed: number[], cols: number): (number | null)[] {
+  const result: (number | null)[] = new Array(cols).fill(null);
+  // Right-align: last typed digit → position 0 (ones), second-to-last → position 1 (tens)
+  for (let i = 0; i < typed.length && i < cols; i++) {
+    result[i] = typed[typed.length - 1 - i];
   }
   return result;
 }
@@ -180,11 +178,11 @@ export default function ExercisePage() {
 
   // ── Speech bubble ────────────────────────
   const [bubbleText, setBubbleText] = useState('');
+  const [bubbleSpeaker, setBubbleSpeaker] = useState('');
   const [bubbleVisible, setBubbleVisible] = useState(false);
 
-  // ── Vertical exercise digit input ────────
-  const [userDigits, setUserDigits] = useState<(number | null)[]>([]);
-  const [activeDigitIndex, setActiveDigitIndex] = useState(0);
+  // ── Vertical exercise digit input (calculator-style: type left-to-right) ──
+  const [typedDigits, setTypedDigits] = useState<number[]>([]);
   const [showCarry, setShowCarry] = useState(false);
   const [isCorrectDisplay, setIsCorrectDisplay] = useState<boolean | null>(null);
 
@@ -218,30 +216,34 @@ export default function ExercisePage() {
     }
   }, [chapterId, chapter, navigate]);
 
-  // ── Show bubble with text + voice ────────
+  // ── Show bubble with character identity + voice ──
   const showBubble = useCallback(
-    (text: string, onEnd?: () => void) => {
-      setBubbleText(text);
+    (dialogueLine: DialogueLine, onEnd?: () => void) => {
+      setBubbleText(dialogueLine.text);
+      setBubbleSpeaker(dialogueLine.speaker);
       setBubbleVisible(true);
-      voice.speak(text, () => {
+
+      // Use the character's voice config if available
+      const charVoice = chapter?.animal.id
+        ? CHARACTER_VOICE_CONFIGS[chapter.animal.id]
+        : undefined;
+      const voiceOverride = dialogueLine.voiceConfig ?? charVoice;
+
+      voice.speak(dialogueLine.text, () => {
         // Keep bubble visible a moment after speech ends
         setTimeout(() => {
           setBubbleVisible(false);
           onEnd?.();
         }, 500);
-      });
+      }, voiceOverride);
     },
-    [voice],
+    [voice, chapter],
   );
 
   // ── Reset input state for a new exercise ─
   const resetInputForExercise = useCallback((exercise: Exercise) => {
     if (exercise.type === 'vertical') {
-      const vertEx = exercise as VerticalExercise;
-      // Size userDigits to match displayed columns (digits + 1) so all visible cells can be filled
-      const cols = vertEx.digits + 1;
-      setUserDigits(new Array(cols).fill(null));
-      setActiveDigitIndex(0);
+      setTypedDigits([]);
       setShowCarry(false);
     } else {
       setThinkingAnswer('');
@@ -270,16 +272,20 @@ export default function ExercisePage() {
     // Start background music
     music.start();
 
-    // Speak greeting and show intro
-    const greeting = getRandomMessage(greetings);
-    setAnimalState('idle');
-    showBubble(greeting, () => {
-      // After greeting, start the first exercise
+    // Speak greeting from the character (narrative engine: first person, no narrator)
+    const greetingLine = getRandomLine(chapter.animal.id, 'greeting');
+    if (greetingLine) {
+      setAnimalState(greetingLine.emotion);
+      showBubble(greetingLine, () => {
+        exerciseHook.startExercise(firstExercise);
+      });
+    } else {
+      setAnimalState('idle');
       exerciseHook.startExercise(firstExercise);
-    });
+    }
   }, [chapter, chapterId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Handle digit input (vertical exercises) ─
+  // ── Handle digit input (calculator-style: left-to-right) ─
   const handleDigit = useCallback(
     (digit: number) => {
       if (exerciseHook.phase !== 'playing') return;
@@ -293,22 +299,17 @@ export default function ExercisePage() {
         return;
       }
 
-      // Vertical exercise: fill current digit position
-      setUserDigits((prev) => {
-        const next = [...prev];
-        next[activeDigitIndex] = digit;
-        return next;
+      // Vertical exercise: append digit naturally (like typing a number)
+      const vertExercise = exercise as VerticalExercise;
+      const maxDigits = vertExercise.digits + 1;
+
+      setTypedDigits((prev) => {
+        if (prev.length >= maxDigits) return prev; // already full
+        return [...prev, digit];
       });
 
-      // Advance to next position if available
-      const maxDigits = userDigits.length;
-      if (activeDigitIndex < maxDigits - 1) {
-        setActiveDigitIndex((prev) => prev + 1);
-      }
-
-      // Check if we should show carry indicator
-      const vertExercise = exercise as VerticalExercise;
-      if (vertExercise.hasCarry && activeDigitIndex === 0) {
+      // Show carry indicator once the user starts typing
+      if (vertExercise.hasCarry && !showCarry) {
         const onesA = vertExercise.operandA % 10;
         const onesB = vertExercise.operandB % 10;
         if (onesA + onesB >= 10) {
@@ -316,7 +317,7 @@ export default function ExercisePage() {
         }
       }
     },
-    [exerciseHook.phase, exerciseHook.exercise, activeDigitIndex, userDigits.length, thinkingAnswer],
+    [exerciseHook.phase, exerciseHook.exercise, thinkingAnswer, showCarry, sound],
   );
 
   // ── Handle delete ────────────────────────
@@ -331,19 +332,9 @@ export default function ExercisePage() {
       return;
     }
 
-    // Vertical exercise: clear current position and go back
-    setUserDigits((prev) => {
-      const next = [...prev];
-      if (next[activeDigitIndex] !== null) {
-        next[activeDigitIndex] = null;
-      } else if (activeDigitIndex > 0) {
-        // Go back one position if current is already null
-        setActiveDigitIndex((prevIdx) => prevIdx - 1);
-        next[activeDigitIndex - 1] = null;
-      }
-      return next;
-    });
-  }, [exerciseHook.phase, exerciseHook.exercise, activeDigitIndex]);
+    // Vertical exercise: remove the last typed digit (natural backspace)
+    setTypedDigits((prev) => prev.slice(0, -1));
+  }, [exerciseHook.phase, exerciseHook.exercise]);
 
   // ── Handle submit ────────────────────────
   const handleSubmit = useCallback(() => {
@@ -354,9 +345,9 @@ export default function ExercisePage() {
     let userAnswer: number;
 
     if (exercise.type === 'vertical') {
-      // Allow submit if at least one digit is entered (don't require all cells)
-      if (userDigits.every((d) => d === null)) return;
-      userAnswer = digitsToNumber(userDigits);
+      if (typedDigits.length === 0) return;
+      // Parse typed digits as a natural number (left-to-right = "16" → 16)
+      userAnswer = parseInt(typedDigits.join(''), 10);
     } else {
       // Thinking exercise
       if (thinkingAnswer.length === 0) return;
@@ -366,23 +357,26 @@ export default function ExercisePage() {
 
     // Submit to the exercise hook (evaluates correctness)
     exerciseHook.submitAnswer(userAnswer);
-  }, [exerciseHook, userDigits, thinkingAnswer]);
+  }, [exerciseHook, typedDigits, thinkingAnswer]);
 
   // ── React to answer result from hook ─────
   useEffect(() => {
     if (!exerciseHook.lastResult || !exerciseHook.exercise || !chapter) return;
     const result = exerciseHook.lastResult;
-    const animalName = chapter.animal.name;
 
     if (result.correct && exerciseHook.phase === 'feedback') {
       // CORRECT ANSWER
       setIsCorrectDisplay(true);
-      setAnimalState('celebrating');
       sound.playCorrect();
 
-      // Speak celebration
-      const msg = formatMessage(getRandomMessage(celebrations), { animalName });
-      showBubble(msg);
+      // Speak celebration from character (narrative engine)
+      const celebLine = getRandomLine(chapter.animal.id, 'correct');
+      if (celebLine) {
+        setAnimalState(celebLine.emotion);
+        showBubble(celebLine);
+      } else {
+        setAnimalState('celebrating');
+      }
 
       // Show paws
       setPawsEarned(result.pawsEarned);
@@ -422,12 +416,16 @@ export default function ExercisePage() {
     } else if (!result.correct && exerciseHook.phase === 'playing') {
       // WRONG ANSWER
       setIsCorrectDisplay(false);
-      setAnimalState('hiding');
       sound.playWrong();
 
-      // Speak encouragement
-      const msg = getRandomMessage(encouragements);
-      showBubble(msg);
+      // Speak encouragement from character (narrative engine)
+      const encourageLine = getRandomLine(chapter.animal.id, 'incorrect');
+      if (encourageLine) {
+        setAnimalState(encourageLine.emotion);
+        showBubble(encourageLine);
+      } else {
+        setAnimalState('hiding');
+      }
 
       // After brief shake, clear input and reset animal
       wrongTimeoutRef.current = setTimeout(() => {
@@ -446,43 +444,36 @@ export default function ExercisePage() {
     }
   }, [exerciseHook.lastResult, exerciseHook.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Handle hint request ──────────────────
+  // ── Handle hint request (narrative engine: character gives hints in first person) ──
   const handleRequestHint = useCallback(() => {
-    if (exerciseHook.phase !== 'playing') return;
+    if (exerciseHook.phase !== 'playing' || !chapter) return;
     const hintLevel = exerciseHook.requestHint();
+    const characterId = chapter.animal.id;
 
-    // Pick hint text based on level
-    let hintText: string;
-    if (hintLevel <= 1) {
-      hintText = getRandomMessage(hintTemplates.level1);
-    } else if (hintLevel <= 2) {
-      hintText = getRandomMessage(hintTemplates.level2);
-    } else if (hintLevel <= 3) {
-      hintText = getRandomMessage(hintTemplates.level3);
-    } else {
-      // Level 4: guided resolution with specific values
+    // Get hint from character's dialogue bank
+    const hintCategory = `hint${Math.min(hintLevel, 4)}` as 'hint1' | 'hint2' | 'hint3' | 'hint4';
+    let hintLine = getRandomLine(characterId, hintCategory);
+
+    // For level 4 hints, fill in specific value placeholders
+    if (hintLine && hintLevel >= 4) {
       const exercise = exerciseHook.exercise;
       if (exercise) {
         const correctAnswer = getCorrectAnswer(exercise);
-        const templates = hintTemplates.level4;
-        hintText = formatMessage(getRandomMessage(templates), {
+        hintLine = formatDialogue(hintLine, {
           min: String(Math.max(0, correctAnswer - 5)),
           max: String(correctAnswer + 5),
-          operation: exercise.type === 'vertical'
-            ? (exercise.operation === 'addition' ? 'la suma' : 'la resta')
-            : 'esta operacion',
           nearAnswer: String(correctAnswer + (Math.random() < 0.5 ? 1 : -1)),
         });
-      } else {
-        hintText = getRandomMessage(hintTemplates.level3);
       }
     }
 
-    setAnimalState('worried');
-    showBubble(hintText, () => {
-      setAnimalState('idle');
-    });
-  }, [exerciseHook, showBubble]);
+    if (hintLine) {
+      setAnimalState(hintLine.emotion);
+      showBubble(hintLine, () => {
+        setAnimalState('idle');
+      });
+    }
+  }, [exerciseHook, showBubble, chapter]);
 
   // ── Stage complete handler ───────────────
   const handleStageComplete = useCallback(() => {
@@ -524,6 +515,13 @@ export default function ExercisePage() {
   const currentExercise = exerciseHook.exercise;
   const isVertical = currentExercise?.type === 'vertical';
   const phase = exerciseHook.phase;
+
+  // Compute positional digits for VerticalOperation display (calculator-style right-aligned)
+  const verticalEx = isVertical && currentExercise ? (currentExercise as VerticalExercise) : null;
+  const numCols = verticalEx ? verticalEx.digits + 1 : 0;
+  const displayUserDigits = typedToPositional(typedDigits, numCols);
+  // Always highlight ones position (rightmost cell) as the "typing target"
+  const displayActiveIndex = typedDigits.length < numCols ? 0 : -1;
   const progressPercent = exercisesRequired > 0
     ? (exercisesInCurrentStage / exercisesRequired) * 100
     : 0;
@@ -560,6 +558,7 @@ export default function ExercisePage() {
               <SpeechBubble
                 text={bubbleText}
                 visible={bubbleVisible}
+                speaker={bubbleSpeaker}
                 position="above"
                 className="text-xs"
               />
@@ -644,8 +643,8 @@ export default function ExercisePage() {
                       digits={(currentExercise as VerticalExercise).digits}
                       hasCarry={(currentExercise as VerticalExercise).hasCarry}
                       hasBorrow={(currentExercise as VerticalExercise).hasBorrow}
-                      userDigits={userDigits}
-                      activeDigitIndex={activeDigitIndex}
+                      userDigits={displayUserDigits}
+                      activeDigitIndex={displayActiveIndex}
                       showCarryIndicator={showCarry}
                       isCorrect={isCorrectDisplay}
                     />
@@ -674,8 +673,8 @@ export default function ExercisePage() {
                     digits={(currentExercise as VerticalExercise).digits}
                     hasCarry={(currentExercise as VerticalExercise).hasCarry}
                     hasBorrow={(currentExercise as VerticalExercise).hasBorrow}
-                    userDigits={userDigits}
-                    activeDigitIndex={activeDigitIndex}
+                    userDigits={displayUserDigits}
+                    activeDigitIndex={displayActiveIndex}
                     showCarryIndicator={showCarry}
                     isCorrect={true}
                   />
@@ -735,7 +734,7 @@ export default function ExercisePage() {
           <CelebrationOverlay
             type="chapter_complete"
             animalName={chapter.animal.name}
-            badgeTitle={`Guardiana del ${chapter.animal.species}`}
+            badgeTitle={`Amiga del ${chapter.animal.species}`}
             funFact={chapter.completionFact}
             onContinue={handleChapterComplete}
           />

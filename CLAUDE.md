@@ -1,7 +1,7 @@
-# AliciaApp — Guardianes del Bosque Chilote
+# AliciaApp — Las aventuras de Alicia en Chiloé
 
 ## What is this
-Gamified math learning web app for Alicia (7yo, 2° básico, Chiloé). She helps native Chiloé animals by solving math exercises. Each animal has a story, personality, and progression tied to math difficulty.
+Gamified math learning web app for Alicia (7yo, 2° básico, Chiloé). She explores Chiloé helping native animals by solving math exercises. Each animal has a story, personality, and progression tied to math difficulty. Characters speak in first person (no omniscient narrator) following the narrative engine.
 
 ## Stack
 - **Frontend:** React 18 + TypeScript + Tailwind CSS 3

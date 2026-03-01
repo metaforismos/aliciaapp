@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 interface SpeechBubbleProps {
   text: string;
   visible: boolean;
+  speaker?: string;    // Character name shown above text
   position?: 'left' | 'right' | 'above';
   className?: string;
 }
@@ -80,6 +81,7 @@ const originMap = {
 export default function SpeechBubble({
   text,
   visible,
+  speaker,
   position = 'above',
   className = '',
 }: SpeechBubbleProps) {
@@ -100,6 +102,11 @@ export default function SpeechBubble({
         >
           {/* Bubble body */}
           <div className="relative rounded-2xl bg-white/95 backdrop-blur-sm shadow-md px-4 py-3">
+            {speaker && (
+              <p className="text-forest-600 text-[11px] font-bold font-display mb-0.5 uppercase tracking-wide">
+                {speaker}
+              </p>
+            )}
             <p className="text-bark text-base font-body leading-snug">
               {text}
             </p>

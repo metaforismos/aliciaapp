@@ -48,8 +48,13 @@ function findBestSpanishVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVo
 // Hook
 // ────────────────────────────────────────────
 
+export interface VoiceOverride {
+  rate?: number;
+  pitch?: number;
+}
+
 export interface UseVoiceReturn {
-  speak: (text: string, onEnd?: () => void) => void;
+  speak: (text: string, onEnd?: () => void, voiceOverride?: VoiceOverride) => void;
   stop: () => void;
   isSpeaking: boolean;
   isSupported: boolean;
@@ -98,7 +103,7 @@ export function useVoice(): UseVoiceReturn {
   // ── Speak function with queue management ──
 
   const speak = useCallback(
-    (text: string, onEnd?: () => void) => {
+    (text: string, onEnd?: () => void, voiceOverride?: VoiceOverride) => {
       const synth = synthRef.current;
 
       // If synthesis unavailable, disabled, or no voices loaded → fire callback immediately
@@ -112,8 +117,9 @@ export function useVoice(): UseVoiceReturn {
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'es-CL';
-      utterance.rate = voiceRate;
-      utterance.pitch = voicePitch;
+      // Use per-character voice overrides if provided, otherwise fall back to global settings
+      utterance.rate = voiceOverride?.rate ?? voiceRate;
+      utterance.pitch = voiceOverride?.pitch ?? voicePitch;
 
       if (spanishVoice) {
         utterance.voice = spanishVoice;
