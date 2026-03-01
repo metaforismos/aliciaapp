@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  /* Chiloé Forest Palette */
+  --color-forest-900: #1a3a0a;
+  --color-forest-800: #2D5016;
+  --color-forest-700: #3a6620;
+  --color-forest-600: #4A7C2E;
+  --color-forest-500: #5e9438;
+  --color-forest-400: #7ab050;
+  --color-forest-300: #9dc87a;
+  --color-forest-200: #c4e0a8;
+  --color-forest-100: #e6f2d8;
+
+  --color-earth-900: #3a2508;
+  --color-earth-800: #5C3D1A;
+  --color-earth-700: #74500f;
+  --color-earth-600: #8B6914;
+  --color-earth-500: #a88020;
+  --color-earth-400: #c49a3a;
+  --color-earth-300: #d9b868;
+  --color-earth-200: #e8d4a0;
+  --color-earth-100: #f5ecd4;
+
+  --color-river-900: #153545;
+  --color-river-800: #1e4d63;
+  --color-river-700: #2E6B8A;
+  --color-river-600: #3a83a8;
+  --color-river-500: #4A9CC7;
+  --color-river-400: #6bb4d6;
+  --color-river-300: #8fcce5;
+  --color-river-200: #b8e1f0;
+  --color-river-100: #e0f2f9;
+
+  --color-sunset-900: #6b2e0a;
+  --color-sunset-800: #943f12;
+  --color-sunset-700: #b85518;
+  --color-sunset-600: #D4722A;
+  --color-sunset-500: #E8943D;
+  --color-sunset-400: #f0ad5e;
+  --color-sunset-300: #f5c78a;
+  --color-sunset-200: #f9ddb5;
+  --color-sunset-100: #fdf0de;
+
+  --color-cream: #FFF8F0;
+  --color-bark: #4A3728;
+
+  /* Typography */
+  --font-display: 'Nunito', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+
+  /* Border radius */
+  --radius-game: 1rem;
+  --radius-button: 0.75rem;
+  --radius-card: 1.25rem;
+}
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background-color: var(--color-cream);
+    color: var(--color-bark);
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  #root {
+    width: 100dvw;
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  .game-button {
+    @apply inline-flex items-center justify-center rounded-[var(--radius-button)] font-bold
+           transition-transform active:scale-95 touch-manipulation
+           min-w-[48px] min-h-[48px];
+  }
+
+  .number-pad-key {
+    @apply inline-flex items-center justify-center rounded-[var(--radius-button)] font-bold
+           transition-transform active:scale-95 touch-manipulation
+           min-w-[48px] min-h-[48px]
+           w-16 h-16 text-2xl bg-white shadow-md
+           border-2 border-forest-200 text-bark
+           hover:bg-forest-100 active:bg-forest-200;
+  }
+
+  .card-game {
+    @apply rounded-[var(--radius-card)] bg-white/90 backdrop-blur-sm shadow-lg p-4;
+  }
+}
